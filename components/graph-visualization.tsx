@@ -138,7 +138,7 @@ export function GraphVisualization({
       )
     }
 
-    console.log({analysisData})
+    // console.log({analysisData})
 
     return (
       <div className="h-full w-full">

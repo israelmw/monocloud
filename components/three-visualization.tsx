@@ -162,7 +162,6 @@ function FaceText({
   isDark = true,
   isSelected = false,
 }: FaceTextProps) {
-  const materialRef = useRef<THREE.Material | undefined>(undefined);
   
   // Pre-format text to avoid doing this work during rendering
   const formattedText = useMemo(() => {
@@ -242,7 +241,7 @@ function FaceText({
       <Text3D
         font="/fonts/Inter_Bold.json"
         size={size * 0.09} // Reduced font size
-        height={0.1} // Reduced height for less extrusion
+        height={0.06} // Reduced height for less extrusion
         curveSegments={3} // Reduced for better performance
         bevelEnabled={false}
         letterSpacing={-0.03} // Tighter letter spacing
@@ -255,7 +254,7 @@ function FaceText({
           emissiveIntensity={isSelected ? 0 : 0.3}
           metalness={0.5}
           roughness={0.2}
-          // castShadow={false}
+          // castShadow={true}
           // receiveShadow={false}
         />
       </Text3D>
@@ -553,15 +552,15 @@ function RepositoryGraph({
             <boxGeometry />
             <MeshTransmissionMaterial
               color="#ffffff"
-              roughness={0.05}
-              metalness={0.3}
+              roughness={0.5}
+              metalness={0.9}
               transparent
               opacity={0.95}
               reflectivity={0.7}
               clearcoat={1}
-              clearcoatRoughness={0.05}
+              clearcoatRoughness={0.5}
               emissive={glowColor}
-              emissiveIntensity={0.5}
+              emissiveIntensity={0.9}
               side={THREE.FrontSide}
             />
 
@@ -573,7 +572,7 @@ function RepositoryGraph({
 
                 // Scale the cube based on text length
                 const textLength = node.id ? node.id.length : 0
-                const cubeScale = Math.min(1 + textLength / 20, 1.5) * baseCubeSize * 1.1
+                const cubeScale = Math.min(1 + textLength / 20, 1.5) * baseCubeSize * 1
 
                 return (
                   <group
@@ -666,9 +665,9 @@ function RepositoryGraph({
 
             // Calculate midpoint with random offset to curve the line
             const midPoint: [number, number, number] = [
-              (sourceOffset[0] + targetOffset[0]) / 2 + (Math.random() - 0.5) * 3,
-              (sourceOffset[1] + targetOffset[1]) / 2 + (Math.random() - 0.5) * 3,
-              (sourceOffset[2] + targetOffset[2]) / 2 + (Math.random() - 0.5) * 3,
+              (sourceOffset[0] + targetOffset[0]) / 2 + (0.5) * 3,
+              (sourceOffset[1] + targetOffset[1]) / 2 + (0.5) * 3,
+              (sourceOffset[2] + targetOffset[2]) / 2 + (0.5) * 3,
             ]
 
             // Highlight connections related to the selected node
