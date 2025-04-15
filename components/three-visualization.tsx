@@ -275,7 +275,6 @@ function ThreeVisualization({
   // Use local state for selection, but always sync with prop
   const [localSelectedNode, setLocalSelectedNode] = useState(selectedModule)
   const [selectedNodePosition, setSelectedNodePosition] = useState(globalState.selectedNodePosition)
-  const [controlMode, setControlMode] = useState("orbit") // "orbit" o "cloud"
   const isDark = theme === "dark"
   const controlsRef = useRef<any>(null)
   const graphRef = useRef(null)
@@ -316,10 +315,6 @@ function ThreeVisualization({
     [onSelectNode],
   )
 
-  // Toggle between control modes
-  const toggleControlMode = useCallback(() => {
-    setControlMode((prev) => (prev === "orbit" ? "cloud" : "orbit"))
-  }, [])
 
   return (
     <div className="w-full h-full">
@@ -350,7 +345,6 @@ function ThreeVisualization({
             onSelectNode={handleNodeClick}
             selectedNode={localSelectedNode}
             isDetailView={isDetailView}
-            controlMode={controlMode}
             isDark={isDark}
             primaryColor={primaryColor}
             edgeColor={edgeColor}
@@ -368,7 +362,7 @@ function ThreeVisualization({
           dampingFactor={0.05}
           rotateSpeed={0.5}
           zoomSpeed={0.5}
-          enabled={controlMode === "orbit"}
+          enabled={true} // Disable default controls
         />
 
         {selectedNodePosition && localSelectedNode && (
@@ -376,15 +370,7 @@ function ThreeVisualization({
         )}
       </Canvas>
 
-    {/* Button to toggle control mode */}
-    <button
-      onClick={toggleControlMode}
-      className={`absolute top-20 right-4 p-2 ${
-        isDark ? "bg-gray-900/70 text-white" : "bg-white/70 text-gray-900 border border-gray-200"
-      } text-xs rounded-lg backdrop-blur-sm`}
-    >
-      Mode: {controlMode === "orbit" ? "Camera Control" : "Cloud Control"}
-    </button>
+  
 
     {/* Instructions */}
     <div
@@ -394,9 +380,7 @@ function ThreeVisualization({
     >
       <p>
         🖱️ <strong>Controls:</strong>{" "}
-        {controlMode === "orbit"
-          ? "Click and drag to rotate camera, scroll to zoom"
-          : "Left click to rotate cloud, right click to move cloud"}
+        Click and drag to rotate camera, scroll to zoom
       </p>
     </div>
 
@@ -423,7 +407,6 @@ function RepositoryGraph({
   onSelectNode,
   selectedNode,
   isDetailView,
-  controlMode,
   isDark,
   primaryColor,
   edgeColor,
@@ -437,7 +420,6 @@ function RepositoryGraph({
   onSelectNode: (nodeId: string, position: [number, number, number]) => void,
   selectedNode: string | null,
   isDetailView: boolean,
-  controlMode: string,
   isDark: boolean,
   primaryColor: string,
   edgeColor: string,
@@ -514,7 +496,7 @@ function RepositoryGraph({
 
   return (
     <group ref={graphRef}>
-      <CustomCloudControls cloudRef={graphRef} enabled={controlMode === "cloud"} rotationSpeed={1.5} panSpeed={1.2} />
+      <CustomCloudControls cloudRef={graphRef} enabled={false} rotationSpeed={1.5} panSpeed={1.2} />
 
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} />
