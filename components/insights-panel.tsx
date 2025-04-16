@@ -95,7 +95,6 @@ export function InsightsPanel({
   }
 
   // Simplified TTS configuration for better clarity
-  // console.log({narrationEnabled})
   const tts = useTextToSpeech(repoDescription, {
     // Only enable TTS if narration is enabled in settings, we're on the AI tab,
     // we have a description, and initialization is complete
