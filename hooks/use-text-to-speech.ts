@@ -53,6 +53,10 @@ export const useTextToSpeech = (
   // Cache to avoid regenerating the same audio
   const audioCache = useRef<Map<string, string>>(new Map());
   
+  // Add a timestamp ref for throttling
+  const lastAttemptTimeRef = useRef<number>(0);
+  const THROTTLE_DELAY = 2000; // 2 seconds minimum between attempts
+
   // Clean up resources
   const cleanup = useCallback(() => {
     if (audioRef.current) {
@@ -247,6 +251,14 @@ export const useTextToSpeech = (
     async (text?: string) => {
       if (!enabled) return;
 
+      // Check throttling
+      const now = Date.now();
+      if (now - lastAttemptTimeRef.current < THROTTLE_DELAY) {
+        console.debug(`Throttled: Need to wait ${THROTTLE_DELAY - (now - lastAttemptTimeRef.current)}ms more`);
+        return;
+      }
+      lastAttemptTimeRef.current = now;
+
       try {
         if (text) {
           // If the text is different or audio has ended, clear current audio
@@ -259,6 +271,12 @@ export const useTextToSpeech = (
 
         if (!textToNarrateRef.current) {
           console.warn('No text to play');
+          return;
+        }
+
+        // If already playing, don't try to play again
+        if (isPlaying) {
+          console.debug('Already playing, skipping play request');
           return;
         }
 
@@ -285,7 +303,7 @@ export const useTextToSpeech = (
         
         // Update state
         lastProcessedTextRef.current = textToNarrateRef.current;
-        lastProcessedTimeRef.current = Date.now();
+        lastProcessedTimeRef.current = now;
 
       } catch (err) {
         console.error('Playback error:', err);

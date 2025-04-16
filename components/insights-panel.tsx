@@ -407,29 +407,34 @@ export function InsightsPanel({
     [analysisData, activeModule, isDetailView],
   )
 
-  // Function to generate repository description
   const generateRepoDescription = useCallback(
     async (forceRefresh = false) => {
-      if (!analysisData || !analysisData.owner || !analysisData.repo || !analysisData.graph?.nodes) return
+      if (!analysisData || !analysisData.owner || !analysisData.repo || !analysisData.graph?.nodes) return;
 
-      setIsGeneratingDescription(true)
+      setIsGeneratingDescription(true);
 
       try {
         // Try to get from cache first
-        const cacheKey = `repo-description:${analysisData.owner}/${analysisData.repo}`
+        const cacheKey = `repo-description:${analysisData.owner}/${analysisData.repo}`;
 
         if (!forceRefresh) {
-          const cachedDescription = await redisCache.get(cacheKey)
-          if (cachedDescription) {
-            setRepoDescription(cachedDescription as string)
-            return
+          try {
+            const cachedDescription = await redisCache.get(cacheKey);
+            if (cachedDescription && typeof cachedDescription === 'string' && !cachedDescription.startsWith('<!DOCTYPE')) {
+              setRepoDescription(cachedDescription);
+              setIsGeneratingDescription(false);
+              return;
+            }
+          } catch (cacheError) {
+            console.warn('Cache read error:', cacheError);
+            // Continue with API request if cache fails
           }
         }
 
         // Prepare data for the API
-        const nodeCount = analysisData.graph.nodes.length
-        const edgeCount = analysisData.graph.edges.length
-        const moduleNames = analysisData.graph.nodes.map((node) => node.id).join(", ")
+        const nodeCount = analysisData.graph.nodes.length;
+        const edgeCount = analysisData.graph.edges.length;
+        const moduleNames = analysisData.graph.nodes.map((node) => node.id).join(", ");
 
         // Call the AI API to generate the description
         const response = await fetch("/api/ai/analyze", {
@@ -448,28 +453,52 @@ export function InsightsPanel({
               moduleNames: moduleNames.substring(0, 500), // Limit length
             },
           }),
-        })
+        });
 
         if (!response.ok) {
-          throw new Error("Failed to generate repository description")
+          throw new Error("Failed to generate repository description");
         }
 
-        const data = await response.json()
-        const generatedDescription = data.result || "No description available."
+        const data = await response.json();
+        const generatedDescription = data.result || "No description available.";
 
-        // Save to cache
-        await redisCache.set(cacheKey, generatedDescription, 60 * 60 * 24) // 24 hours
+        // Validate the description before caching
+        if (typeof generatedDescription === 'string' && !generatedDescription.startsWith('<!DOCTYPE')) {
+          try {
+            // Save to cache
+            await redisCache.set(cacheKey, generatedDescription, 60 * 60 * 24); // 24 hours
+          } catch (cacheError) {
+            console.warn('Cache write error:', cacheError);
+            // Continue even if cache save fails
+          }
+        }
 
-        setRepoDescription(generatedDescription)
+        if (isMountedRef.current) {
+          setRepoDescription(generatedDescription);
+        }
       } catch (error: unknown) {
-        console.error("Error generating repository description:", error)
-        setRepoDescription("Failed to generate repository description. Please try again later.")
+        console.error("Error generating repository description:", error);
+        if (isMountedRef.current) {
+          setRepoDescription("Failed to generate repository description. Please try again later.");
+        }
       } finally {
-        setIsGeneratingDescription(false)
+        if (isMountedRef.current) {
+          setIsGeneratingDescription(false);
+        }
       }
     },
     [analysisData],
-  )
+  );
+
+  const [isInitialDescription, setIsInitialDescription] = useState(true)
+
+  // Generate repository description when analysisData changes
+  useEffect(() => {
+    if (analysisData && !isDetailView && isInitialDescription) {
+      setIsInitialDescription(false);
+      generateRepoDescription(false);
+    }
+  }, [analysisData, isDetailView, generateRepoDescription, isInitialDescription]);
 
   // Update active module when selectedModule changes
   useEffect(() => {
@@ -490,7 +519,7 @@ export function InsightsPanel({
     }
   }, [selectedModule, analysisData, analyzeModuleWithAI])
 
-  const [isInitialDescription, setIsInitialDescription] = useState(true)
+  
 
   // Generate repository description when analysisData changes
   useEffect(() => {
