@@ -22,11 +22,11 @@ function MainContent() {
   const searchParams = useSearchParams()
   const route = useRouter()
 
-  // Sincroniza el estado con los parámetros URL solo cuando cambian
+  // Sync state with URL parameters only when they change
   useEffect(() => {
     const view = searchParams.get("currentView") as "landing" | "visualization" | "details" | null
     if (view) {
-      // reset search params
+      // Reset search params
       route.replace("/")
       setCurrentView(view)
     }
@@ -116,7 +116,7 @@ function MainContent() {
                   analysisData={analysisData}
                   onSelectNode={handleSelectNode}
                   isDetailView={currentView === "details"}
-                  selectedModule={selectedModule} // Pasar explícitamente el módulo seleccionado
+                  selectedModule={selectedModule} // Explicitly pass the selected module
                 />
               </div>
 

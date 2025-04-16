@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { toast } from "sonner"
-import { clientCache } from "@/lib/client-cache"
+import { redisCache } from "@/lib/redis-cache"
 import { useTheme } from "next-themes"
 import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { useNarration } from "@/context/narration-context"
@@ -29,17 +29,17 @@ import {
 } from "@/types"
 import { AudioPlayerButton } from "@/components/ui/audio-player-button"
 
-// Añadir la palabra clave "export" al inicio de la declaración de la función
+// Add export keyword to the beginning of the function declaration
 export function InsightsPanel({
   analysisData = null,
   selectedModule = null,
-  setSelectedModule = () => {}, // Recibir explícitamente esta prop
+  setSelectedModule = () => {}, // Explicitly receive this prop
   isDetailView = false,
   onBackToVisualization = () => {},
   isCollapsed = false,
   onToggleCollapse = () => {},
 }: InsightsPanelProps) {
-  // Definir todos los hooks al principio para evitar errores de "Rendered fewer hooks than expected"
+  // Define all hooks at the beginning to avoid "Rendered fewer hooks than expected" errors
   const [insights, setInsights] = useState<InsightItem[]>([])
   const [stats, setStats] = useState<StatsData>({
     packages: 0,
@@ -112,25 +112,25 @@ export function InsightsPanel({
 
   // Add a new effect to properly initialize TTS
   useEffect(() => {
-    // Después de cargar el componente, permitir la inicialización de TTS
+    // After component loads, allow TTS initialization
     const timer = setTimeout(() => {
       if (!ttsInitialized) {
         console.log("Initializing TTS system")
         setTtsInitialized(true)
       }
-    }, 500) // Un pequeño retraso para asegurar que otros estados estén configurados
+    }, 500) // Small delay to ensure other states are set up
 
     return () => clearTimeout(timer)
   }, [ttsInitialized])
 
-  // Efecto para pausar el audio cuando cambia el módulo seleccionado
+  // Effect to pause audio when selected module changes
   useEffect(() => {
     if (selectedModule !== null && tts.isPlaying) {
       tts.pause();
     }
   }, [selectedModule, tts]);
 
-  // Función para validar la altura del panel
+  // Function to validate panel height
   validatePanelHeightRef.current = () => {
     if (contentRef.current) {
       const windowHeight = window.innerHeight
@@ -142,7 +142,7 @@ export function InsightsPanel({
     }
   }
 
-  // Ensure panel height fits the screen - IMPORTANTE: Este useEffect debe estar antes de cualquier return condicional
+  // Ensure panel height fits the screen - IMPORTANT: This useEffect should be before any conditional return
   useEffect(() => {
     validatePanelHeightRef.current()
 
@@ -163,11 +163,11 @@ export function InsightsPanel({
     }
   }, [])
 
-  // Completamente reescrito para mayor claridad y robustez
+  // Completely rewritten for better clarity and robustness
   const handleBackClick = useCallback(() => {
     console.log("Back button clicked")
 
-    // Primero limpiar todos los estados locales
+    // First clear all local states
     setAiAnalysis("")
     setActiveModule(null)
     setError(null)
@@ -175,7 +175,7 @@ export function InsightsPanel({
     setIsAnalyzingModule(false)
     analysisInProgressRef.current = false
 
-    // Luego llamar a la función de navegación
+    // Then call the navigation function
     if (typeof onBackToVisualization === "function") {
       console.log("Calling onBackToVisualization")
       onBackToVisualization()
@@ -184,7 +184,7 @@ export function InsightsPanel({
     }
   }, [onBackToVisualization])
 
-  // Toggle collapsed state - Completamente reescrito para mayor claridad
+  // Toggle collapsed state - Completely rewritten for better clarity
   const toggleCollapse = useCallback(() => {
     console.log("Toggle collapse called, current state:", isCollapsed)
     if (typeof onToggleCollapse === "function") {
@@ -203,7 +203,7 @@ export function InsightsPanel({
     }
   }, [analysisData])
 
-  // Actualizar la pestaña activa cuando cambia isDetailView
+  // Update active tab when isDetailView changes
   useEffect(() => {
     if (!initialRenderRef.current && isMountedRef.current) {
       setActiveTab("ai")
@@ -211,7 +211,7 @@ export function InsightsPanel({
     initialRenderRef.current = false
   }, [isDetailView])
 
-  // Actualizar activeModule cuando cambia selectedModule
+  // Update activeModule when selectedModule changes
   useEffect(() => {
     console.log("selectedModule changed:", selectedModule)
     if (selectedModule !== activeModule) {
@@ -266,7 +266,7 @@ export function InsightsPanel({
             const cacheKey = `ai-analysis:${repoKey}:${module}`
 
             console.log(`Checking client cache for key: ${cacheKey}`)
-            const cachedAnalysis = clientCache.get(cacheKey)
+            const cachedAnalysis = await redisCache.get(cacheKey)
 
             if (cachedAnalysis) {
               console.log(`Using client cached AI analysis for ${module}:`, cachedAnalysis)
@@ -370,11 +370,11 @@ export function InsightsPanel({
               const cacheKey = `ai-analysis:${repoKey}:${module}`
 
               console.log(`Saving to client cache: ${cacheKey}`, data.result)
-              const saved = clientCache.set(cacheKey, data.result, 1000 * 60 * 60 * 12) // 12 horas
+              const saved = await redisCache.set(cacheKey, data.result, 1000 * 60 * 60 * 12) // 12 hours
               console.log(`Cache save result: ${saved ? "success" : "failed"}`)
 
-              // Verificar que se guardó correctamente
-              const verifyCache = clientCache.get(cacheKey)
+              // Verify that it was saved correctly
+              const verifyCache = await redisCache.get(cacheKey)
               console.log(`Verify cache save: ${verifyCache ? "found in cache" : "not found in cache"}`)
             } catch (cacheError) {
               console.error("Error saving to client cache:", cacheError)
@@ -408,7 +408,7 @@ export function InsightsPanel({
     [analysisData, activeModule, isDetailView],
   )
 
-  // Función para generar la descripción del repositorio
+  // Function to generate repository description
   const generateRepoDescription = useCallback(
     async (forceRefresh = false) => {
       if (!analysisData || !analysisData.owner || !analysisData.repo || !analysisData.graph?.nodes) return
@@ -416,23 +416,23 @@ export function InsightsPanel({
       setIsGeneratingDescription(true)
 
       try {
-        // Intentar obtener de caché primero
+        // Try to get from cache first
         const cacheKey = `repo-description:${analysisData.owner}/${analysisData.repo}`
 
         if (!forceRefresh) {
-          const cachedDescription = clientCache.get(cacheKey)
+          const cachedDescription = await redisCache.get(cacheKey)
           if (cachedDescription) {
             setRepoDescription(cachedDescription as string)
             return
           }
         }
 
-        // Preparar datos para la API
+        // Prepare data for the API
         const nodeCount = analysisData.graph.nodes.length
         const edgeCount = analysisData.graph.edges.length
         const moduleNames = analysisData.graph.nodes.map((node) => node.id).join(", ")
 
-        // Llamar a la API de AI para generar la descripción
+        // Call the AI API to generate the description
         const response = await fetch("/api/ai/analyze", {
           method: "POST",
           headers: {
@@ -446,7 +446,7 @@ export function InsightsPanel({
             repoStats: {
               nodeCount,
               edgeCount,
-              moduleNames: moduleNames.substring(0, 500), // Limitar longitud
+              moduleNames: moduleNames.substring(0, 500), // Limit length
             },
           }),
         })
@@ -458,8 +458,8 @@ export function InsightsPanel({
         const data = await response.json()
         const generatedDescription = data.result || "No description available."
 
-        // Guardar en caché
-        clientCache.set(cacheKey, generatedDescription, 60 * 60 * 24) // 24 horas
+        // Save to cache
+        await redisCache.set(cacheKey, generatedDescription, 60 * 60 * 24) // 24 hours
 
         setRepoDescription(generatedDescription)
       } catch (error: unknown) {
@@ -493,7 +493,7 @@ export function InsightsPanel({
 
   const [isInitialDescription, setIsInitialDescription] = useState(true)
 
-  // Generar descripción del repositorio cuando cambia el analysisData
+  // Generate repository description when analysisData changes
   useEffect(() => {
     if (analysisData && !isDetailView && isInitialDescription) {
       setIsInitialDescription(false)
@@ -707,7 +707,7 @@ export function InsightsPanel({
     }
   }
 
-  // Renderizar el panel colapsado (versión móvil y desktop)
+  // Render the collapsed panel (mobile and desktop version)
   if (isCollapsed) {
     return (
       <div className={`flex h-full w-full flex-col items-center justify-center ${isDark ? "bg-black" : "bg-white"}`}>

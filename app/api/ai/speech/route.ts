@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
     };
     
     try {
-      // Cache the response (1 day TTL)
-      await redisCache.set(cacheKey, responseData, 24 * 60 * 60);
+      // Cache the response (4 day TTL)
+      await redisCache.set(cacheKey, responseData, 48 * 60 * 60);
     } catch (cacheError) {
       console.warn("[TTS API] Cache set error:", cacheError);
     }

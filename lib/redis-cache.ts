@@ -59,7 +59,7 @@ export class RedisCache {
         await redis.get(testReadKey)
         this.getCommandAllowed = true
         this.isRedisAvailable = true
-      } catch (getError) {
+      } catch (getError: any) {
         if (getError.message && (getError.message.includes("NOPERM") || getError.message.includes("no permissions"))) {
           console.log("[RedisCache] GET command not permitted:", getError.message)
           this.getCommandAllowed = false
@@ -76,7 +76,7 @@ export class RedisCache {
       if (this.isRedisAvailable) {
         try {
           await redis.exists(testReadKey)
-        } catch (existsError) {
+        } catch (existsError: any) {
           if (
             existsError.message &&
             (existsError.message.includes("NOPERM") || existsError.message.includes("no permissions"))
@@ -94,7 +94,7 @@ export class RedisCache {
       try {
         await redis.keys(`${this.prefix}_test_keys_*`)
         this.keysCommandAllowed = true
-      } catch (keysError) {
+      } catch (keysError: any) {
         if (
           keysError.message &&
           (keysError.message.includes("NOPERM") || keysError.message.includes("no permissions"))
@@ -116,7 +116,7 @@ export class RedisCache {
         // If we get here, we have write permissions
         this.isReadOnly = false
         console.log("[RedisCache] Redis connection test successful with read-write permissions")
-      } catch (writeError) {
+      } catch (writeError: any) {
         // Check if this is a permission error
         if (
           writeError.message &&
@@ -143,7 +143,7 @@ export class RedisCache {
           this.isReadOnly = true
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       // Complete connection failure
       console.error("[RedisCache] Redis connection test failed:", error)
       this.isRedisAvailable = false
@@ -192,17 +192,17 @@ export class RedisCache {
         } else {
           console.log(`[RedisCache] Redis cache miss for key: ${key}`)
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`[RedisCache] Error reading from Redis for key ${key}:`, error)
 
         // Check if this is a permission error
-        if (error.message && (error.message.includes("NOPERM") || error.message.includes("no permissions"))) {
+        if (error instanceof Error && error.message && (error.message.includes("NOPERM") || error.message.includes("no permissions"))) {
           this.getCommandAllowed = false
           console.log("[RedisCache] GET command not permitted:", error.message)
         }
         // Check if this is a connection issue and update status
         else if (
-          error.message &&
+          error instanceof Error && error.message &&
           (error.message.includes("connect") || error.message.includes("network") || error.message.includes("timeout"))
         ) {
           this.isRedisAvailable = false
@@ -257,12 +257,12 @@ export class RedisCache {
         }
 
         return true
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`[RedisCache] Error writing to Redis for key ${key}:`, error)
 
         // Check if this is a permission error
         if (
-          error.message &&
+          error instanceof Error && error.message &&
           (error.message.includes("NOPERM") ||
             error.message.includes("no permissions") ||
             error.message.includes("readonly"))
@@ -282,7 +282,7 @@ export class RedisCache {
         }
         // Check if this is a connection issue
         else if (
-          error.message &&
+          error instanceof Error && error.message &&
           (error.message.includes("connect") || error.message.includes("network") || error.message.includes("timeout"))
         ) {
           this.isRedisAvailable = false
@@ -340,12 +340,12 @@ export class RedisCache {
         await redis.del(fullKey)
         console.log(`[RedisCache] Deleted from Redis: ${fullKey}`)
         return true
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`[RedisCache] Error deleting from Redis for key ${key}:`, error)
 
         // Check if this is a permission error
         if (
-          error.message &&
+          error instanceof Error && error.message &&
           (error.message.includes("NOPERM") ||
             error.message.includes("no permissions") ||
             error.message.includes("readonly"))
@@ -380,17 +380,17 @@ export class RedisCache {
         }
 
         return true
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`[RedisCache] Error clearing Redis:`, error)
 
         // Check if this is a permission error for KEYS command
-        if (error.message && error.message.includes("NOPERM") && error.message.includes("keys")) {
+        if (error instanceof Error && error.message && error.message.includes("NOPERM") && error.message.includes("keys")) {
           this.keysCommandAllowed = false
           console.log("[RedisCache] KEYS command not permitted:", error.message)
         }
         // Check if this is a general permission error
         else if (
-          error.message &&
+          error instanceof Error && error.message &&
           (error.message.includes("NOPERM") ||
             error.message.includes("no permissions") ||
             error.message.includes("readonly"))
@@ -426,11 +426,11 @@ export class RedisCache {
         // Count keys in Redis
         const keys = await redis.keys(this.prefix + "*")
         keysCount = keys.length
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Error checking Redis keys count:", error)
 
         // Check if this is a permission error for KEYS command
-        if (error.message && error.message.includes("NOPERM") && error.message.includes("keys")) {
+        if (error instanceof Error && error.message && error.message.includes("NOPERM") && error.message.includes("keys")) {
           this.keysCommandAllowed = false
           console.log("[RedisCache] KEYS command not permitted:", error.message)
         }

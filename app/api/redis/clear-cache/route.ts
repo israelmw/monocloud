@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server"
 import { redisCache } from "@/lib/redis-cache"
 
-// Esta función verifica si la solicitud proviene de un usuario autenticado
-// En una aplicación real, deberías implementar una verificación de sesión adecuada
+// This function verifies if the request comes from an authenticated user
+// In a real application, you should implement proper session verification
 function isAuthenticated(req: Request) {
-  // Aquí podrías verificar cookies de sesión, tokens JWT, etc.
-  // Por ahora, solo permitimos solicitudes desde el mismo origen
+  // Here you could verify session cookies, JWT tokens, etc.
+  // For now, we only allow requests from the same origin
   return true
 }
 
 export async function POST(req: Request) {
   try {
-    // Verificar si el usuario está autenticado
+    // Verify if the user is authenticated
     if (!isAuthenticated(req)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     }
 
     if (!status.keysCommandAllowed) {
-      // Si el comando KEYS no está permitido, solo limpiamos la caché en memoria
+      // If the KEYS command is not allowed, we only clear the memory cache
       await redisCache.clear()
       return NextResponse.json({
         success: true,

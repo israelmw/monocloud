@@ -23,12 +23,12 @@ export function AudioPlayerButton({
 }: AudioPlayerButtonProps) {
   return (
     <div className={cn("relative w-8 h-8", className)} {...props}>
-      {/* Efecto de aura que solo se muestra durante la reproducción */}
+      {/* Aura effect that only shows during playback */}
       {isPlaying  && (
         <div className="aura absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0"></div>
       )}
       
-      {/* Círculo de progreso */}
+      {/* Progress circle */}
       <svg className="absolute inset-0 w-full h-full -rotate-90 z-10" viewBox="0 0 100 100">
         <circle
           className="text-gray-300 dark:text-gray-600"
@@ -53,7 +53,7 @@ export function AudioPlayerButton({
         />
       </svg>
       
-      {/* Botón centrado */}
+      {/* Centered button */}
       <Button
         variant="ghost"
         size="icon"

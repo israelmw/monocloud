@@ -66,9 +66,10 @@ export async function fetchRepoTree(owner: string, repo: string) {
         path: item.path,
         sha: item.sha,
       }))
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error fetching repo tree:", error)
-    throw new Error(`Failed to fetch repository tree: ${error.message || "Unknown error"}`)
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    throw new Error(`Failed to fetch repository tree: ${errorMessage}`)
   }
 }
 
@@ -94,17 +95,18 @@ export async function fetchFileContent(owner: string, repo: string, path: string
     }
 
     throw new Error("Unexpected response format from GitHub API")
-  } catch (error) {
-    if (error.status === 403 && error.message.includes("rate limit")) {
+  } catch (error: unknown) {
+    if (error instanceof Error && 'status' in error && error.status === 403 && error.message.includes("rate limit")) {
       throw new Error("GitHub API rate limit exceeded. Please try again later.")
     }
 
-    if (error.status === 429) {
+    if (error instanceof Error && 'status' in error && error.status === 429) {
       throw new Error("Too many requests to GitHub API. Please try again later.")
     }
 
     console.error(`Error fetching file content for ${path}:`, error)
-    throw new Error(`Failed to fetch file content: ${error.message || "Unknown error"}`)
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    throw new Error(`Failed to fetch file content: ${errorMessage}`)
   }
 }
 
@@ -119,45 +121,45 @@ export async function analyzeRepoGraph(owner: string, repo: string) {
 
     const limitedFiles = packageFiles.slice(0, MAX_FILES)
 
-    // Crear arrays para nodos y conexiones
+    // Create arrays for nodes and connections
     const nodes = []
     const edges = []
     const moduleMap = new Map()
 
-    // Procesar cada archivo package.json
+    // Process each package.json file
     for (const file of limitedFiles) {
       try {
-        // Extraer el nombre del módulo de la ruta del archivo
+        // Extract module name from file path
         const pathParts = file.path.split("/")
-        // Usar el directorio padre como nombre del módulo, o "root" si está en la raíz
+        // Use parent directory as module name, or "root" if in the root
         const moduleName = pathParts.length > 1 ? pathParts[pathParts.length - 2] : "root"
 
         console.log(`Processing package.json for module: ${moduleName}, path: ${file.path}`)
 
-        // Obtener y parsear el contenido del package.json
+        // Get and parse package.json content
         const packageJson = await fetchFileContent(owner, repo, file.path)
         const pkg = JSON.parse(packageJson)
 
-        // Añadir el nodo al grafo
+        // Add node to graph
         nodes.push({
           id: moduleName,
           label: moduleName,
           data: {
             path: file.path,
             pkg,
-            packageJson, // Guardar el JSON original para análisis posterior
+            packageJson, // Save original JSON for later analysis
           },
         })
 
-        // Guardar las dependencias en el mapa de módulos
+        // Save dependencies in module map
         moduleMap.set(moduleName, {
           name: moduleName,
           dependencies: Object.keys(pkg.dependencies || {}),
           devDependencies: Object.keys(pkg.devDependencies || {}),
         })
       } catch (error) {
-        if (error.message && (error.message.includes("rate limit") || error.message.includes("Too many requests"))) {
-          throw error // Propagar errores de límite de tasa
+        if (error instanceof Error && error.message && (error.message.includes("rate limit") || error.message.includes("Too many requests"))) {
+          throw error // Propagate rate limit errors
         }
         console.error(`Error processing package.json for ${file.path}:`, error)
       }
@@ -165,9 +167,9 @@ export async function analyzeRepoGraph(owner: string, repo: string) {
 
     console.log(`Successfully processed ${nodes.length} modules`)
 
-    // Encontrar dependencias internas (dentro del mismo repositorio)
+    // Find internal dependencies (within the same repository)
     for (const [sourceName, sourceData] of moduleMap.entries()) {
-      // Comprobar dependencias regulares
+      // Check regular dependencies
       for (const dep of sourceData.dependencies || []) {
         if (moduleMap.has(dep)) {
           edges.push({
@@ -178,7 +180,7 @@ export async function analyzeRepoGraph(owner: string, repo: string) {
         }
       }
 
-      // También comprobar devDependencies
+      // Also check devDependencies
       for (const dep of sourceData.devDependencies || []) {
         if (moduleMap.has(dep)) {
           edges.push({
@@ -192,18 +194,18 @@ export async function analyzeRepoGraph(owner: string, repo: string) {
 
     console.log(`Found ${edges.length} internal dependencies between modules`)
 
-    // Si no se encontraron conexiones pero hay nodos, crear conexiones artificiales
-    // para que la visualización sea más interesante
+    // If no connections were found but there are nodes, create artificial connections
+    // to make the visualization more interesting
     if (edges.length === 0 && nodes.length > 1) {
       console.log("No internal dependencies found, creating artificial connections for visualization")
 
-      // Conectar todos los módulos al primero como fallback
+      // Connect all modules to the first one as a fallback
       const firstModule = nodes[0].id
       for (let i = 1; i < nodes.length; i++) {
         edges.push({
           source: firstModule,
           target: nodes[i].id,
-          type: "artificial", // Marcar como artificial
+          type: "artificial", // Mark as artificial
         })
       }
     }

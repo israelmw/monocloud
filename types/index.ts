@@ -1,4 +1,4 @@
-// Interfaces para la estructura de datos del grafo
+// Interfaces for the graph data structure
 export interface GraphNode {
   id: string;
   data?: {
@@ -25,7 +25,7 @@ export interface AnalysisData {
   graph: Graph;
 }
 
-// Interfaces para respuestas de API y acciones
+// Interfaces for API responses and actions
 
 export interface SimpleTextProps {
   text?: string;
@@ -49,9 +49,9 @@ export interface ErrorResponse {
 
 export type RepositoryAnalysisResponse = SuccessResponse | ErrorResponse;
 
-// Interfaces para componentes específicos
+// Interfaces for specific components
 
-// Para GraphVisualization
+// For GraphVisualization
 export interface GraphVisualizationProps {
   analysisData: AnalysisData | null;
   onSelectNode: (nodeId: string) => void;
@@ -64,7 +64,7 @@ export interface Dimensions {
   height: number;
 }
 
-// Para InsightsPanel
+// For InsightsPanel
 export interface InsightItem {
   id: number;
   title: string;
@@ -90,12 +90,12 @@ export interface InsightsPanelProps {
   onToggleCollapse: (collapsed: boolean) => void;
 }
 
-// Para Hero
+// For Hero
 export interface HeroProps {
   onAnalysisComplete: (data: AnalysisData) => void;
 }
 
-// Para useTextToSpeech
+// For useTextToSpeech
 export interface TextToSpeechOptions {
   enabled?: boolean;
   autoPlay?: boolean;
@@ -119,7 +119,7 @@ export interface TextToSpeechReturnType {
   progress: number; // Added progress property to track playback progress
 }
 
-// Para ThreeVisualization
+// For ThreeVisualization
 export interface Position3D {
   x: number;
   y: number;

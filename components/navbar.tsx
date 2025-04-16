@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
 import { useNarration } from "@/context/narration-context"
 
-// Componente Navbar con tipos definidos
+// Navbar component with defined types
 export function Navbar() {
   const { theme } = useTheme()
   const { narrationEnabled, toggleNarration } = useNarration()
@@ -36,7 +36,7 @@ export function Navbar() {
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="flex items-center space-x-2">
-            {/* Switch de narración */}
+            {/* Narration switch */}
             <div className="flex items-center mr-2">
               <button
                 onClick={toggleNarration}

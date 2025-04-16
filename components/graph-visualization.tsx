@@ -51,7 +51,7 @@ export function GraphVisualization({
   analysisData = null,
   onSelectNode,
   isDetailView = false,
-  selectedModule = null, // Recibir explícitamente el módulo seleccionado
+  selectedModule = null, // Explicitly receive the selected module
 }: GraphVisualizationProps) {
   const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)

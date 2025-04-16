@@ -76,7 +76,7 @@ export async function POST(req: Request) {
 
       let prompt
       if (isRepoDescription) {
-        // Prompt para descripción general del repositorio
+        // Prompt for general repository description
         prompt = `You are an expert code analyst. Create a comprehensive overview of the GitHub repository "${moduleName}" based on these statistics:
 
 Number of modules: ${repoStats?.nodeCount || "unknown"}
@@ -87,7 +87,7 @@ Provide a clear, concise description of what this repository likely does, its ar
 Focus on explaining the repository's purpose and structure in a way that would be helpful for someone exploring it for the first time.
 Keep your response to 3-4 paragraphs maximum.`
       } else {
-        // Prompt original para análisis de módulo
+        // Original prompt for module analysis
         prompt = `You are an expert code reviewer. Explain what the module "${moduleName}" does based on this package.json content:
 
 ${packageJsonString}
@@ -112,10 +112,10 @@ Provide a clear, non-technical summary of its responsibility.`
 
       console.log(`[AI API] Successfully generated analysis for ${moduleName}`)
 
-      // Save to cache (12 hours) - this will use memory cache if Redis fails
+      // Save to cache (24 hours) - this will use memory cache if Redis fails
       try {
         console.log(`[AI API] Saving analysis to cache for key: ${cacheKey}`)
-        const saved = await redisCache.set(cacheKey, text, 60 * 60 * 12)
+        const saved = await redisCache.set(cacheKey, text, 60 * 60 * 24)
         console.log(`[AI API] Cache save result: ${saved ? "success" : "failed"}`)
 
         // Verify the cache save

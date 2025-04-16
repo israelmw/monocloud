@@ -83,11 +83,10 @@ function CameraFocus({ target, enabled, controlsRef, graphRef }: CameraFocusProp
       }
 
       // Calculate ideal camera position
-      // Calculate ideal camera position - ajustado para ver mejor la cara frontal
       const idealDistance = 25
       const targetPos = new THREE.Vector3(target[0], target[1], target[2])
 
-      // Posicionar la cámara directamente frente al cubo
+      // Position the camera directly in front of the cube
       const newPosition = new THREE.Vector3(targetPos.x, targetPos.y, targetPos.z + idealDistance)
 
       // Store initial rotation of the graph
@@ -232,7 +231,7 @@ function FaceText({
   // Calculate offset to position text within the cube face
   const textOffset = size * 0.4;
   
-  // Ajustar la posición del texto para que sobresalga ligeramente del cubo
+  // Adjust the text position to slightly protrude from the cube
   const textZPosition = 0;
   
   return (
@@ -245,7 +244,7 @@ function FaceText({
         curveSegments={3} // Reduced for better performance
         bevelEnabled={false}
         letterSpacing={-0.03} // Tighter letter spacing
-        position={[-textOffset, size * 0.2, textZPosition]} // Ajustado para que sobresalga del cubo
+        position={[-textOffset, size * 0.2, textZPosition]} // Adjusted to protrude from the cube
       >
         {formattedText || ""}
         <meshStandardMaterial
@@ -267,7 +266,7 @@ function ThreeVisualization({
   analysisData = null,
   onSelectNode,
   isDetailView = false,
-  selectedModule = null, // Recibir explícitamente el módulo seleccionado
+  selectedModule = null, // Explicitly receive the selected module
   dimensions = { width: 0, height: 0 },
   theme = "dark",
 }: ThreeVisualizationProps) {
@@ -306,7 +305,7 @@ function ThreeVisualization({
       globalState.selectedNode = nodeId
       globalState.selectedNodePosition = position
 
-      // Llamar a la función de selección del componente padre
+      // Call the parent component's selection function
       if (onSelectNode) {
         onSelectNode(nodeId)
       }
@@ -432,11 +431,11 @@ function RepositoryGraph({
   const [GlowingNodeInstances, GlowingNode] = createInstances()
   const { camera } = useThree()
 
-  // Ajustar la posición inicial de la cámara para ver mejor los títulos
+  // Adjust initial camera position to better view titles
   useEffect(() => {
-    // Solo ajustar la cámara si no hay un nodo seleccionado
+    // Only adjust camera if no node is selected
     if (!selectedNode && controlsRef.current) {
-      // Posición inicial mejorada para ver mejor los títulos de frente
+      // Improved initial position for better front view of titles
       camera.position.set(0, 0, 50)
       camera.lookAt(0, 0, 0)
       controlsRef.current.update()
@@ -481,7 +480,7 @@ function RepositoryGraph({
     }
   }, [nodes])
 
-  // En lugar del retorno anticipado, usamos una variable para controlar la renderización
+  // Instead of early return, use a variable to control rendering
   const hasPositions = Object.keys(positions).length > 0
 
   // Filter valid nodes and connections

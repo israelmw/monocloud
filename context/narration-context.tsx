@@ -13,7 +13,7 @@ interface NarrationContextType {
 
 const NarrationContext = createContext<NarrationContextType | undefined>(undefined)
 
-// Función para obtener una cookie
+// Function to get a cookie
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null
 
@@ -27,7 +27,7 @@ function getCookie(name: string): string | null {
   return null
 }
 
-// Función para establecer una cookie
+// Function to set a cookie
 function setCookie(name: string, value: string, days = 365): void {
   if (typeof document === "undefined") return
 
@@ -38,12 +38,12 @@ function setCookie(name: string, value: string, days = 365): void {
 }
 
 export function NarrationProvider({ children }: { children: ReactNode }) {
-  // Inicializar con el valor de la cookie o false por defecto
+  // Initialize with cookie value or false by default
   const [narrationEnabled, setNarrationEnabled] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const [narrationError, setNarrationError] = useState<string | null>(null)
 
-  // Cargar la preferencia de la cookie al montar el componente
+  // Load preference from cookie when mounting component
   useEffect(() => {
     const savedPreference = getCookie("narrationEnabled")
     console.log("Loaded narration preference from cookie:", savedPreference)
@@ -55,7 +55,7 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
     setIsInitialized(true)
   }, [])
 
-  // Guardar la preferencia en una cookie cuando cambia
+  // Save preference in cookie when it changes
   useEffect(() => {
     if (isInitialized) {
       console.log("Saving narration preference to cookie:", narrationEnabled)

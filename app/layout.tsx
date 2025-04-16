@@ -6,7 +6,7 @@ import { NarrationProvider } from "@/context/narration-context"
 import { cn } from "@/lib/utils"
 import "./globals.css"
 
-// Cargar la fuente Inter desde Google Fonts
+// Load Inter font from Google Fonts
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
@@ -16,7 +16,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "MonoCloud - Visual Monorepo Explorer",
   description: "Explore and understand large monorepos with an interactive, node-based graph visualization",
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({

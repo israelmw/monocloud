@@ -196,7 +196,7 @@ export const useTextToSpeech = (
     [voice, repoName, onError]
   );
 
-  // Inicializar el elemento de audio
+  // Initialize audio element
   const initAudioElement = useCallback((url: string) => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
@@ -231,7 +231,7 @@ export const useTextToSpeech = (
       if (onError) onError(new Error('Error playing audio'));
     };
 
-    // Manejar el progreso
+    // Handle progress
     audioRef.current.ontimeupdate = () => {
       if (audioRef.current && audioRef.current.duration) {
         const currentProgress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
@@ -249,7 +249,7 @@ export const useTextToSpeech = (
 
       try {
         if (text) {
-          // Si el texto es diferente o el audio ha terminado, limpiar el audio actual
+          // If the text is different or audio has ended, clear current audio
           if (textToNarrateRef.current !== text || (audioRef.current && audioRef.current.ended)) {
             cleanup();
             setAudioUrl(null); // Reset audioUrl to force regeneration
@@ -262,13 +262,13 @@ export const useTextToSpeech = (
           return;
         }
 
-        // Si tenemos un audio existente pausado y no ha terminado, simplemente reanudarlo
+        // If we have an existing paused audio that hasn't ended, just resume it
         if (audioRef.current && audioRef.current.paused && !audioRef.current.ended) {
           await audioRef.current.play();
           return;
         }
 
-        // Generar o recuperar el audio URL
+        // Generate or retrieve audio URL
         let url = audioUrl;
         if (!url || (audioRef.current && audioRef.current.ended)) {
           url = await generateAudio(textToNarrateRef.current);
@@ -277,13 +277,13 @@ export const useTextToSpeech = (
           }
         }
 
-        // Inicializar o actualizar el elemento de audio
+        // Initialize or update audio element
         const audio = initAudioElement(url);
         
-        // Reproducir
+        // Play
         await audio.play();
         
-        // Actualizar estado
+        // Update state
         lastProcessedTextRef.current = textToNarrateRef.current;
         lastProcessedTimeRef.current = Date.now();
 
@@ -303,7 +303,7 @@ export const useTextToSpeech = (
     if (textToNarrateRef.current) {
       const cacheKey = `${textToNarrateRef.current}-${voice}`;
       
-      // Limpiar el audio de la caché
+      // Clear audio from cache
       if (audioCache.current.has(cacheKey)) {
         const oldUrl = audioCache.current.get(cacheKey);
         if (oldUrl) {
@@ -312,10 +312,10 @@ export const useTextToSpeech = (
         audioCache.current.delete(cacheKey);
       }
       
-      // Limpiar el audio actual
+      // Clear current audio
       cleanup();
       
-      // Generar nuevo audio
+      // Generate new audio
       generateAudio(textToNarrateRef.current);
     }
   }, [generateAudio, voice, cleanup]);
