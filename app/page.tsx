@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import { Hero } from "@/components/hero"
@@ -11,7 +11,7 @@ import { useTheme } from "next-themes"
 import { useSearchParams, useRouter } from "next/navigation"
 import { AnalysisData } from "@/types"
 
-export default function Home() {
+function MainContent() {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
   const [selectedModule, setSelectedModule] = useState<string | null>(null)
   const [isPanelCollapsed, setIsPanelCollapsed] = useState<boolean>(false)
@@ -148,5 +148,14 @@ export default function Home() {
 
       <Toaster />
     </div>
+  )
+}
+
+// Wrap the main content in a Suspense boundary
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <MainContent />
+    </Suspense>
   )
 }
