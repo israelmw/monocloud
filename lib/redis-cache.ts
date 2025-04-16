@@ -1,10 +1,30 @@
 import { Redis } from "@upstash/redis"
 
+// Validate Redis configuration
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || ""
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || ""
+
+if (!redisUrl || !redisToken) {
+  console.warn("[RedisCache] Missing Redis configuration. Cache will use memory-only mode.")
+}
+
 // Initialize Redis client using environment variables provided by Vercel
 const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || "",
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "",
+  url: redisUrl,
+  token: redisToken,
+  automaticDeserialization: true,
+  enableAutoPipelining: false // Disable automatic pipelining to prevent pipeline endpoint issues
 })
+
+// Test Redis connection immediately
+;(async () => {
+  try {
+    await redis.ping()
+    console.log("[RedisCache] Successfully connected to Redis")
+  } catch (error) {
+    console.error("[RedisCache] Redis connection test failed:", error)
+  }
+})()
 
 // In-memory cache as fallback
 const memoryCache = new Map()
