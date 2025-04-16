@@ -4,12 +4,15 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { Search, AlertTriangle, Database, Waypoints } from "lucide-react"
 import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { analyzeRepository } from "@/app/actions"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useTheme } from "next-themes"
-import { AnalysisData, HeroProps } from "@/types"
+import {  HeroProps } from "@/types"
+import { ShimmerButton } from "@/components/magicui/shimmer-button"
+import { InteractiveGridPattern } from "@/components/magicui/interactive-grid-pattern"
+import { cn } from "@/lib/utils"
+import { AuroraText } from "@/components/magicui/aurora-text";
 
 const EXAMPLE_REPOS = ["vercel/next.js", "facebook/react", "microsoft/vscode", "angular/angular"]
 
@@ -106,9 +109,18 @@ export function Hero({ onAnalysisComplete }: HeroProps) {
 
   return (
     <section
-      className={`flex items-center justify-center min-h-[calc(100vh-3.5rem)] w-full ${isDark ? "bg-black" : "bg-gray-50"}`}
+      className={`relative flex items-center justify-center min-h-[calc(100vh-3.5rem)] w-full ${isDark ? "bg-black" : "bg-gray-50"}`}
     >
-      <div className="container px-4 md:px-6 flex flex-col items-center">
+       <InteractiveGridPattern
+        className={cn(
+          "[mask-image:radial-gradient(400px_circle_at_center,white,transparent)]",
+        )}
+        width={20}
+        height={20}
+        squares={[80, 80]}
+        squaresClassName="hover:fill-blue-500"
+      />
+      <div className="container px-4 md:px-6 flex flex-col items-center z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -141,7 +153,7 @@ export function Hero({ onAnalysisComplete }: HeroProps) {
               isDark ? "from-white to-gray-300" : "from-gray-900 to-gray-600"
             } bg-clip-text text-transparent`}
           >
-            Visualize Your Monorepo
+            Visualize Your <AuroraText>Monorepo</AuroraText>
           </h1>
           <p className={`mx-auto max-w-[700px] ${isDark ? "text-gray-400" : "text-gray-600"} md:text-xl`}>
             Explore and understand large monorepos with an interactive, node-based graph visualization.
@@ -176,13 +188,14 @@ export function Hero({ onAnalysisComplete }: HeroProps) {
                 disabled={isLoading}
               />
             </div>
-            <Button
+            <ShimmerButton
               type="submit"
               disabled={isLoading}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
-            >
+              >
+                <span className="dark:text-white">
               {isLoading ? "Analyzing..." : "Analyze"}
-            </Button>
+                </span>
+              </ShimmerButton>
           </form>
 
           <div className="flex flex-wrap justify-center gap-2 text-sm text-muted-foreground">

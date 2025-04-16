@@ -101,8 +101,8 @@ Provide a clear, non-technical summary of its responsibility.`
       const { text } = await generateText({
         model: openai("gpt-4o"),
         prompt: prompt,
-        temperature: 0.4,
-        maxTokens: 300,
+        temperature: 0.2,
+        maxTokens: 200,
       })
 
       // Validate that the result is a string

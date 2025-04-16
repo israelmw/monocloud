@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Github, Volume2, VolumeX, Waypoints } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Button } from "@/components/ui/button"
@@ -11,7 +12,9 @@ import { useNarration } from "@/context/narration-context"
 export function Navbar() {
   const { theme } = useTheme()
   const { narrationEnabled, toggleNarration } = useNarration()
+  const router = useRouter()
   const isDark: boolean = theme === "dark"
+
 
   return (
     <header
@@ -19,7 +22,7 @@ export function Navbar() {
     >
       <div className="container flex h-14 items-center">
         <div className="mr-4 flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
+          <Link href="/?currentView=landing" className="mr-6 flex items-center space-x-2">
             <div className="relative w-8 h-8 flex items-center justify-center">
               <div className="absolute inset-0 bg-blue-500 opacity-20 rounded-full blur-sm"></div>
               <Waypoints className="h-6 w-6 relative z-10" />
@@ -49,7 +52,7 @@ export function Navbar() {
               </button>
             </div>
             <Button variant="ghost" size="icon" asChild>
-              <Link href="https://github.com/monocloud/monocloud" target="_blank" rel="noreferrer">
+              <Link href="https://github.com/israelmw/monocloud" target="_blank" rel="noreferrer">
                 <Github className="h-4 w-4" />
                 <span className="sr-only">GitHub</span>
               </Link>

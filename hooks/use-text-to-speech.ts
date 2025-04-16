@@ -24,6 +24,9 @@ export const useTextToSpeech = (
   const [error, setError] = useState<Error | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   
+  // Add a new state to track the progress of the audio playback
+  const [progress, setProgress] = useState<number>(0);
+  
   // References for audio and flow control
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const circuitBreakerRef = useRef<boolean>(false);
@@ -54,19 +57,11 @@ export const useTextToSpeech = (
   const cleanup = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.src = "";
+      audioRef.current.currentTime = 0;
       audioRef.current = null;
     }
-    if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
-      setAudioUrl(null);
-    }
-    // Clear any pending debounce timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-  }, [audioUrl]);
+    setProgress(0);
+  }, []);
   
   // Reset request state
   const resetRequestState = useCallback(() => {
@@ -91,6 +86,7 @@ export const useTextToSpeech = (
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      setProgress(0);
       setIsPlaying(false);
     }
   }, []);
@@ -99,33 +95,37 @@ export const useTextToSpeech = (
   const pause = useCallback(() => {
     if (audioRef.current && !audioRef.current.paused) {
       audioRef.current.pause();
-      setIsPlaying(false);
     }
   }, []);
-  
+
   // Generate audio from text using server API
   const generateAudio = useCallback(
     async (text: string) => {
       setIsLoading(true);
       setError(null);
       
+      if (!text || text.trim() === "") {
+        console.error("Cannot generate audio: text is empty");
+        setError(new Error("Text cannot be empty"));
+        setIsLoading(false);
+        return null;
+      }
+
       try {
-        // Check if we already have the audio in cache
         const cacheKey = `${text}-${voice}`;
         if (audioCache.current.has(cacheKey)) {
           console.log("Using cached audio");
-          setAudioUrl(audioCache.current.get(cacheKey)!);
+          const cachedUrl = audioCache.current.get(cacheKey)!;
+          setAudioUrl(cachedUrl);
           setIsLoading(false);
-          return;
+          return cachedUrl;
         }
         
-        // Determine instructions for synthesis
         let instructions = "Speak naturally and professionally";
         if (repoName) {
           instructions += `, mentioning the repository ${repoName}`;
         }
         
-        // Generate the audio using the server API endpoint
         console.log("Generating speech for:", text);
         
         const response = await fetch('/api/ai/speech', {
@@ -147,24 +147,42 @@ export const useTextToSpeech = (
         
         const data = await response.json();
         
-        // Convert base64 to blob
-        const binaryString = atob(data.audio);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        if (!data.audio || typeof data.audio !== 'string') {
+          throw new Error('Invalid audio data received from server');
         }
-        
-        // Create blob and URL for the audio
-        const audioBlob = new Blob([bytes], { type: data.contentType });
-        const url = URL.createObjectURL(audioBlob);
-        
-        // Save to cache
-        audioCache.current.set(cacheKey, url);
-        
-        // Update state
-        setAudioUrl(url);
-        setIsLoading(false);
+
+        try {
+          // Convert base64 to blob directly
+          const byteCharacters = atob(data.audio);
+          const byteNumbers = new Array(byteCharacters.length);
+          
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: data.contentType });
+          
+          // Validate blob size
+          if (blob.size === 0) {
+            throw new Error('Generated audio blob is empty');
+          }
+          
+          // Create URL directly from the blob
+          const url = URL.createObjectURL(blob);
+          
+          // Save to cache
+          audioCache.current.set(cacheKey, url);
+          
+          // Update state
+          setAudioUrl(url);
+          setIsLoading(false);
+          return url;
+          
+        } catch (e) {
+          console.error("Audio processing error:", e);
+          throw new Error(`Failed to process audio: ${e instanceof Error ? e.message : String(e)}`);
+        }
       } catch (err) {
         console.error("Error generating speech:", err);
         setError(err instanceof Error ? err : new Error(String(err)));
@@ -172,130 +190,152 @@ export const useTextToSpeech = (
         if (onError) {
           onError(err instanceof Error ? err : new Error(String(err)));
         }
+        return null;
       }
     },
     [voice, repoName, onError]
   );
-  
+
+  // Inicializar el elemento de audio
+  const initAudioElement = useCallback((url: string) => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+    }
+
+    if (audioRef.current.src !== url) {
+      audioRef.current.src = url;
+    }
+    
+    audioRef.current.onplay = () => {
+      console.log('Audio playback started');
+      setIsPlaying(true);
+      if (onStart) onStart();
+    };
+    
+    audioRef.current.onpause = () => {
+      console.log('Audio playback paused');
+      setIsPlaying(false);
+    };
+    
+    audioRef.current.onended = () => {
+      console.log('Audio playback ended');
+      setIsPlaying(false);
+      setProgress(0);
+      if (onEnd) onEnd();
+    };
+    
+    audioRef.current.onerror = (e) => {
+      console.error('Audio error:', e);
+      setError(new Error('Error playing audio'));
+      setIsPlaying(false);
+      if (onError) onError(new Error('Error playing audio'));
+    };
+
+    // Manejar el progreso
+    audioRef.current.ontimeupdate = () => {
+      if (audioRef.current && audioRef.current.duration) {
+        const currentProgress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+        setProgress(currentProgress);
+      }
+    };
+
+    return audioRef.current;
+  }, [onStart, onEnd, onError]);
+
+  // Play audio with improved error handling and state management
+  const play = useCallback(
+    async (text?: string) => {
+      if (!enabled) return;
+
+      try {
+        if (text) {
+          // Si el texto es diferente o el audio ha terminado, limpiar el audio actual
+          if (textToNarrateRef.current !== text || (audioRef.current && audioRef.current.ended)) {
+            cleanup();
+            setAudioUrl(null); // Reset audioUrl to force regeneration
+          }
+          textToNarrateRef.current = text;
+        }
+
+        if (!textToNarrateRef.current) {
+          console.warn('No text to play');
+          return;
+        }
+
+        // Si tenemos un audio existente pausado y no ha terminado, simplemente reanudarlo
+        if (audioRef.current && audioRef.current.paused && !audioRef.current.ended) {
+          await audioRef.current.play();
+          return;
+        }
+
+        // Generar o recuperar el audio URL
+        let url = audioUrl;
+        if (!url || (audioRef.current && audioRef.current.ended)) {
+          url = await generateAudio(textToNarrateRef.current);
+          if (!url) {
+            throw new Error('Failed to generate audio URL');
+          }
+        }
+
+        // Inicializar o actualizar el elemento de audio
+        const audio = initAudioElement(url);
+        
+        // Reproducir
+        await audio.play();
+        
+        // Actualizar estado
+        lastProcessedTextRef.current = textToNarrateRef.current;
+        lastProcessedTimeRef.current = Date.now();
+
+      } catch (err) {
+        console.error('Playback error:', err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+        if (onError) onError(err instanceof Error ? err : new Error(String(err)));
+        cleanup();
+        setIsPlaying(false);
+      }
+    },
+    [enabled, audioUrl, generateAudio, cleanup, initAudioElement, onError]
+  );
+
   // Force regeneration (ignoring cache)
   const forceRegenerate = useCallback(() => {
     if (textToNarrateRef.current) {
       const cacheKey = `${textToNarrateRef.current}-${voice}`;
+      
+      // Limpiar el audio de la caché
       if (audioCache.current.has(cacheKey)) {
+        const oldUrl = audioCache.current.get(cacheKey);
+        if (oldUrl) {
+          URL.revokeObjectURL(oldUrl);
+        }
         audioCache.current.delete(cacheKey);
       }
       
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = "";
-      }
+      // Limpiar el audio actual
+      cleanup();
       
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-        setAudioUrl(null);
-      }
-      
-      // Reset the last processed text to allow regeneration
-      lastProcessedTextRef.current = "";
-      lastProcessedTimeRef.current = 0;
-      
+      // Generar nuevo audio
       generateAudio(textToNarrateRef.current);
     }
-  }, [generateAudio, audioUrl, voice]);
-  
-  // Play audio
-  const play = useCallback(
-    async (text?: string) => {
-      if (!enabled) return;
-      
-      // If a request is in progress or the circuit breaker is activated, do nothing
-      if (requestInProgressRef.current || circuitBreakerRef.current) {
-        return;
-      }
-      
-      // Safety check: limit the number of play attempts to prevent potential loops
-      if (playAttemptsRef.current > 3) {
-        console.warn("Too many play attempts detected, activating circuit breaker");
-        circuitBreakerRef.current = true;
-        
-        // Auto-reset circuit breaker after 5 seconds
-        setTimeout(() => {
-          circuitBreakerRef.current = false;
-          playAttemptsRef.current = 0;
-        }, 5000);
-        
-        return;
-      }
-      
-      // Increment play attempt counter
-      playAttemptsRef.current += 1;
-      
-      // Update the text if provided
-      if (text) {
-        textToNarrateRef.current = text;
-      }
-      
-      // If there is no text to narrate, do nothing
-      if (!textToNarrateRef.current) {
-        resetRequestState();
-        return;
-      }
-      
-      // Mark that a request is in progress
-      requestInProgressRef.current = true;
-      
-      // If there is no audio URL, generate it
-      if (!audioUrl) {
-        await generateAudio(textToNarrateRef.current);
-      }
-      
-      // If there is an audio URL, play it
-      if (audioUrl) {
-        if (!audioRef.current) {
-          audioRef.current = new Audio(audioUrl);
-          
-          // Set up events
-          audioRef.current.onplay = () => {
-            setIsPlaying(true);
-            if (onStart) onStart();
-          };
-          
-          audioRef.current.onended = () => {
-            setIsPlaying(false);
-            if (onEnd) onEnd();
-            resetRequestState();
-          };
-          
-          audioRef.current.onerror = (err) => {
-            console.error("Audio playback error:", err);
-            setIsPlaying(false);
-            setError(new Error("Error during audio playback"));
-            resetRequestState();
-            if (onError) onError(new Error("Error during audio playback"));
-          };
-        } else {
-          audioRef.current.src = audioUrl;
+  }, [generateAudio, voice, cleanup]);
+
+  // Update progress during playback
+  useEffect(() => {
+    if (audioRef.current) {
+      const updateProgress = () => {
+        if (audioRef.current && audioRef.current.duration) {
+          setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
         }
-        
-        try {
-          await audioRef.current.play();
-          // After successful playback start, record this text as processed
-          lastProcessedTextRef.current = textToNarrateRef.current;
-          lastProcessedTimeRef.current = Date.now();
-        } catch (err) {
-          console.error("Error playing audio:", err);
-          setError(err instanceof Error ? err : new Error(String(err)));
-          resetRequestState();
-          if (onError) {
-            onError(err instanceof Error ? err : new Error(String(err)));
-          }
-        }
-      } else {
-        resetRequestState();
-      }
-    },
-    [enabled, audioUrl, generateAudio, onStart, onEnd, onError, resetRequestState]
-  );
+      };
+
+      audioRef.current.addEventListener("timeupdate", updateProgress);
+
+      return () => {
+        audioRef.current?.removeEventListener("timeupdate", updateProgress);
+      };
+    }
+  }, [audioRef]);
   
   // Clean up resources on unmount
   useEffect(() => {
@@ -391,7 +431,8 @@ export const useTextToSpeech = (
     stop,
     resetCircuitBreaker,
     resetRequestState,
-    forceRegenerate
+    forceRegenerate,
+    progress
   };
 };
 

@@ -8,30 +8,37 @@ import { GraphVisualization } from "@/components/graph-visualization"
 import { InsightsPanel } from "@/components/insights-panel"
 import { Toaster } from "@/components/ui/sonner"
 import { useTheme } from "next-themes"
+import { useSearchParams, useRouter } from "next/navigation"
 import { AnalysisData } from "@/types"
 
 export default function Home() {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
   const [selectedModule, setSelectedModule] = useState<string | null>(null)
-  const [currentView, setCurrentView] = useState<"landing" | "visualization" | "details">("landing")
   const [isPanelCollapsed, setIsPanelCollapsed] = useState<boolean>(false)
   const [windowHeight, setWindowHeight] = useState<number>(0)
+  const [currentView, setCurrentView] = useState<"landing" | "visualization" | "details">("landing")
   const { theme } = useTheme()
   const isDark = theme === "dark"
+  const searchParams = useSearchParams()
+  const route = useRouter()
+
+  // Sincroniza el estado con los parámetros URL solo cuando cambian
+  useEffect(() => {
+    const view = searchParams.get("currentView") as "landing" | "visualization" | "details" | null
+    if (view) {
+      // reset search params
+      route.replace("/")
+      setCurrentView(view)
+    }
+  }, [searchParams])
 
   // Update window height on mount and resize
   useEffect(() => {
     const updateHeight = () => {
       setWindowHeight(window.innerHeight)
     }
-
-    // Set initial height
     updateHeight()
-
-    // Add event listener for resize
     window.addEventListener("resize", updateHeight)
-
-    // Clean up
     return () => window.removeEventListener("resize", updateHeight)
   }, [])
 
@@ -43,24 +50,16 @@ export default function Home() {
 
   const handleSelectNode = useCallback((nodeId: string) => {
     console.log("Node selected:", nodeId)
-    // Primero cambiar la vista y luego establecer el módulo seleccionado
     setCurrentView("details")
-    // Usar setTimeout para asegurar que el cambio de vista se procese primero
     setTimeout(() => {
       setSelectedModule(nodeId)
-      setIsPanelCollapsed(false) // Ensure panel is expanded when selecting a node
+      setIsPanelCollapsed(false)
     }, 10)
   }, [])
 
-  // Completamente reescrito para ser más robusto
   const handleBackToVisualization = useCallback(() => {
     console.log("handleBackToVisualization called")
-
-    // Primero cambiar la vista
     setCurrentView("visualization")
-
-    // Luego limpiar el módulo seleccionado con un pequeño retraso
-    // para asegurar que los componentes se actualicen en el orden correcto
     setTimeout(() => {
       console.log("Clearing selectedModule in handleBackToVisualization")
       setSelectedModule(null)
@@ -68,9 +67,9 @@ export default function Home() {
   }, [])
 
   const handleTogglePanel = useCallback((collapsed: boolean) => {
-    console.log("Toggle panel:", collapsed);
-    setIsPanelCollapsed(collapsed);
-  }, []);
+    console.log("Toggle panel:", collapsed)
+    setIsPanelCollapsed(collapsed)
+  }, [])
 
   return (
     <div
@@ -90,7 +89,7 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.2 }}
               className="flex-1 h-full"
             >
               <Hero onAnalysisComplete={handleAnalysisComplete} />
@@ -135,7 +134,7 @@ export default function Home() {
                 <InsightsPanel
                   analysisData={analysisData}
                   selectedModule={selectedModule}
-                  setSelectedModule={setSelectedModule}
+                  setSelectedModule={handleSelectNode}
                   isDetailView={currentView === "details"}
                   onBackToVisualization={handleBackToVisualization}
                   isCollapsed={isPanelCollapsed}

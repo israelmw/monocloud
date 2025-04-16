@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { experimental_generateSpeech as speech } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { serverCache } from "@/lib/cache";
+import { redisCache } from "@/lib/redis-cache"
 
 export const runtime = "edge";
 
@@ -16,15 +16,33 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Validate that the text is not empty or only whitespace
+    if (!text || text.trim() === "") {
+      return NextResponse.json(
+        { error: "Text cannot be empty or whitespace" },
+        { status: 400 }
+      );
+    }
+    
     // Create a cache key based on the request parameters
     const cacheKey = `speech:${text}:${voice || "alloy"}:${instructions || "Speak naturally and professionally"}`;
     
-    // Check if we have a cached response
-    const cachedAudio = serverCache.get<{ audio: string, contentType: string }>(cacheKey);
-    
-    if (cachedAudio) {
-      console.log("[TTS API] Using cached audio response");
-      return NextResponse.json(cachedAudio);
+    try {
+      // Check if we have a cached response
+      const cachedAudio = await redisCache.get<{ audio: string, contentType: string }>(cacheKey);
+      
+      if (cachedAudio) {
+        console.log("[TTS API] Using cached audio response");
+        return new NextResponse(JSON.stringify(cachedAudio), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=86400'
+          }
+        });
+      }
+    } catch (cacheError) {
+      console.warn("[TTS API] Cache error:", cacheError);
     }
     
     console.log("[TTS API] Cache miss, generating new audio");
@@ -35,24 +53,39 @@ export async function POST(request: NextRequest) {
       voice: voice || "alloy"
     });
     
-    // Convert the audio to base64
-    const uint8Array = audioResponse.audio.uint8Array;
-    const base64Audio = Buffer.from(uint8Array).toString('base64');
+    if (!audioResponse?.audio?.uint8Array) {
+      throw new Error('Invalid audio response from OpenAI');
+    }
     
     const responseData = { 
-      audio: base64Audio,
+      audio: Buffer.from(audioResponse.audio.uint8Array).toString('base64'),
       contentType: "audio/mpeg"
     };
     
-    // Cache the response (1 day TTL = 24 hours * 60 minutes * 60 seconds * 1000ms)
-    serverCache.set(cacheKey, responseData, 24 * 60 * 60 * 1000);
+    try {
+      // Cache the response (1 day TTL)
+      await redisCache.set(cacheKey, responseData, 24 * 60 * 60);
+    } catch (cacheError) {
+      console.warn("[TTS API] Cache set error:", cacheError);
+    }
     
-    return NextResponse.json(responseData);
+    return new NextResponse(JSON.stringify(responseData), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=86400'
+      }
+    });
   } catch (error: any) {
     console.error("[TTS API] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to generate speech" },
-      { status: 500 }
+    return new NextResponse(
+      JSON.stringify({ error: error.message || "Failed to generate speech" }),
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
     );
   }
 }

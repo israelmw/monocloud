@@ -31,6 +31,11 @@
     --chart-3: 316 73% 52%;
     --chart-4: 175 84% 32%;
     --chart-5: 20 90% 50%;
+    --color-1: 0 100% 63%;
+    --color-2: 270 100% 63%;
+    --color-3: 210 100% 63%;
+    --color-4: 195 100% 63%;
+    --color-5: 90 100% 63%;
   }
 
   .dark {
@@ -53,6 +58,15 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+    --color-1: 0 100% 63%;
+    --color-2: 270 100% 63%;
+    --color-3: 210 100% 63%;
+    --color-4: 195 100% 63%;
+    --color-5: 90 100% 63%;
+  }
+  .theme {
+    --rainbow: rainbow var(--speed, 2s) infinite linear;
+    --animate-aurora: aurora 8s ease-in-out infinite alternate;
   }
 }
 
@@ -97,5 +111,66 @@
   }
   100% {
     background-position: 0% 50%;
+  }
+}
+
+/* Aura animation */
+@layer utilities {
+  .aura {
+    width: 32px;
+    height: 32px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    box-shadow:
+      2px 0 2px 3px rgba(211, 65, 255, 0.4),
+      0 -2px 2px 3px rgba(15, 228, 247, 0.5),
+      -2px 0 2px 3px rgba(3, 53, 255, 0.6),
+      0 2px 2px 3px rgba(14, 165, 233, 0.6);
+    border-radius: 100%;
+    animation: shadow-rotate 4s linear infinite;
+    transform-origin: center;
+  }
+}
+
+@keyframes shadow-rotate {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@theme inline {
+  @keyframes rainbow {
+  0% {
+    background-position: 0%;
+    }
+  100% {
+    background-position: 200%;
+    }
+  }
+  @keyframes aurora {
+  0% {
+    backgroundPosition: 0% 50%;
+    transform: rotate(-5deg) scale(0.9);
+    }
+  25% {
+    backgroundPosition: 50% 100%;
+    transform: rotate(5deg) scale(1.1);
+    }
+  50% {
+    backgroundPosition: 100% 50%;
+    transform: rotate(-3deg) scale(0.95);
+    }
+  75% {
+    backgroundPosition: 50% 0%;
+    transform: rotate(3deg) scale(1.05);
+    }
+  100% {
+    backgroundPosition: 0% 50%;
+    transform: rotate(-5deg) scale(0.9);
+    }
   }
 }

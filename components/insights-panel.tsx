@@ -26,8 +26,8 @@ import {
   Graph, 
   InsightItem, 
   StatsData, 
-  AnalysisData
 } from "@/types"
+import { AudioPlayerButton } from "@/components/ui/audio-player-button"
 
 // Añadir la palabra clave "export" al inicio de la declaración de la función
 export function InsightsPanel({
@@ -60,10 +60,6 @@ export function InsightsPanel({
   const [repoDescription, setRepoDescription] = useState<string>("")
   const [isGeneratingDescription, setIsGeneratingDescription] = useState<boolean>(false)
   const { narrationEnabled, resetTTSErrors, setNarrationError } = useNarration()
-
-  // Now, let's add a state variable to track loading state for the cleanup operation
-  // Add this with the other state variables at the top of the component
-  const [isLoading, setIsLoading] = useState<boolean>(false)
 
   // Add a new state to track if TTS has been initialized
   const [ttsInitialized, setTtsInitialized] = useState<boolean>(false)
@@ -106,7 +102,7 @@ export function InsightsPanel({
     enabled: narrationEnabled && activeTab === "ai" && Boolean(repoDescription) && ttsInitialized,
     
     // Control autoPlay separately to avoid loops
-    autoPlay: narrationEnabled && Boolean(repoDescription) && ttsInitialized && !isLoading,
+    autoPlay: narrationEnabled && Boolean(repoDescription) && ttsInitialized,
     
     onStart: () => console.log("Narration started"),
     onEnd: () => console.log("Narration ended"),
@@ -126,6 +122,13 @@ export function InsightsPanel({
 
     return () => clearTimeout(timer)
   }, [ttsInitialized])
+
+  // Efecto para pausar el audio cuando cambia el módulo seleccionado
+  useEffect(() => {
+    if (selectedModule !== null && tts.isPlaying) {
+      tts.pause();
+    }
+  }, [selectedModule, tts]);
 
   // Función para validar la altura del panel
   validatePanelHeightRef.current = () => {
@@ -203,7 +206,7 @@ export function InsightsPanel({
   // Actualizar la pestaña activa cuando cambia isDetailView
   useEffect(() => {
     if (!initialRenderRef.current && isMountedRef.current) {
-      setActiveTab(isDetailView ? "ai" : "stats")
+      setActiveTab("ai")
     }
     initialRenderRef.current = false
   }, [isDetailView])
@@ -488,12 +491,15 @@ export function InsightsPanel({
     }
   }, [selectedModule, analysisData, analyzeModuleWithAI])
 
+  const [isInitialDescription, setIsInitialDescription] = useState(true)
+
   // Generar descripción del repositorio cuando cambia el analysisData
   useEffect(() => {
-    if (analysisData && !isDetailView) {
+    if (analysisData && !isDetailView && isInitialDescription) {
+      setIsInitialDescription(false)
       generateRepoDescription()
     }
-  }, [analysisData, isDetailView, generateRepoDescription])
+  }, [analysisData, isDetailView, generateRepoDescription, isInitialDescription])
 
   // Generate insights and stats when analysis data changes
   useEffect(() => {
@@ -725,7 +731,7 @@ export function InsightsPanel({
         className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b border-input ${isDark ? "bg-black" : "bg-white"}`}
       >
         <h2 className="text-lg font-semibold truncate">
-          {isDetailView && activeModule ? `Module: ${activeModule}` : "Insights"}
+          {isDetailView && activeModule !== null ? `Module: ${activeModule}` : "Insights"}
         </h2>
 
         <div className="flex items-center gap-2">
@@ -744,7 +750,7 @@ export function InsightsPanel({
 
       <div ref={contentRef} className="flex-1 overflow-auto">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className={`sticky top-0 z-10 w-full ${isDark ? "bg-gray-900" : "bg-gray-100"} px-4 pt-4`}>
+          <TabsList className={`sticky top-0 z-10 w-full ${isDark ? "bg-gray-900" : "bg-gray-100"} px-4 py-4`}>
             <TabsTrigger value="ai" className={`flex-1 data-[state=active]:${isDark ? "bg-gray-800" : "bg-white"}`}>
               AI Analysis
             </TabsTrigger>
@@ -782,7 +788,7 @@ export function InsightsPanel({
                       </span>
                     )}
                   </h3>
-                  <Button
+                  {/* <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => activeModule && analyzeModuleWithAI(activeModule, true)}
@@ -791,7 +797,7 @@ export function InsightsPanel({
                   >
                     <RefreshCw className={`h-4 w-4 ${isAnalyzingModule ? "animate-spin" : ""}`} />
                     <span className="sr-only">Refresh analysis</span>
-                  </Button>
+                  </Button> */}
                 </div>
 
                 {isAnalyzingModule ? (
@@ -823,35 +829,20 @@ export function InsightsPanel({
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-medium">Repository Overview</h3>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => generateRepoDescription(true)}
-                        disabled={isGeneratingDescription}
-                        title="Refresh description"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${isGeneratingDescription ? "animate-spin" : ""}`} />
-                        <span className="sr-only">Refresh description</span>
-                      </Button>
-                      
-                      {/* Add Reset Narration button if TTS has errors */}
-                      {narrationEnabled && tts.error && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            resetTTSErrors?.();
-                            tts.resetCircuitBreaker?.();
-                            tts.resetRequestState?.();
-                            toast.success("Narración reiniciada", {
-                              description: "El sistema de narración ha sido reiniciado. Intente de nuevo.",
-                            });
+                       {/* Audio player button */}
+                        <AudioPlayerButton
+                          isPlaying={tts.isPlaying}
+                          isLoading={tts.isLoading}
+                          progress={tts.progress}
+                          onPlayPause={() => {
+                            if (tts.isPlaying) {
+                              tts.pause();
+                            } else {
+                              tts.play(repoDescription);
+                            }
                           }}
-                          className="text-xs"
-                        >
-                          Reiniciar Narración
-                        </Button>
-                      )}
+                        />
+                      
                     </div>
                   </div>
 
@@ -927,6 +918,8 @@ export function InsightsPanel({
                       </Button>
                     </div>
                   )}
+
+                 
                 </div>
 
                 {/* Insights */}
@@ -955,7 +948,7 @@ export function InsightsPanel({
                   ))
                 )}
 
-                {isModuleAnalysisEnabled && !isDetailView && (
+                {isModuleAnalysisEnabled && selectedModule && (
                   <div
                     className={`rounded-lg border border-input ${isDark ? "bg-gray-900/50" : "bg-gray-50"} p-3 shadow-sm`}
                   >
@@ -1086,8 +1079,14 @@ export function InsightsPanel({
                           : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                     }`}
                     onClick={() => {
-                      analyzeModuleWithAI(node.id)
+                      // First change to AI tab
                       setActiveTab("ai")
+                      // Then call setSelectedModule which will trigger the parent's handleSelectNode
+                      setSelectedModule(node.id)
+                      // Finally analyze the module after a small delay to match graph behavior
+                      setTimeout(() => {
+                        analyzeModuleWithAI(node.id)
+                      }, 50)
                     }}
                   >
                     <h3 className="font-medium">{node.id}</h3>

@@ -83,7 +83,7 @@ export interface StatsData {
 export interface InsightsPanelProps {
   analysisData: AnalysisData | null;
   selectedModule: string | null;
-  setSelectedModule: (module: string | null) => void;
+  setSelectedModule: (nodeId: string) => void
   isDetailView?: boolean;
   onBackToVisualization: () => void;
   isCollapsed?: boolean;
@@ -116,6 +116,7 @@ export interface TextToSpeechReturnType {
   resetCircuitBreaker: () => void;
   resetRequestState: () => void;
   forceRegenerate: () => void;
+  progress: number; // Added progress property to track playback progress
 }
 
 // Para ThreeVisualization
